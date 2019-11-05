@@ -137,10 +137,20 @@ public class MapObjectDataFileInspectorEditor : Editor
                     objsExtraProp[i].objectPrefabResourcePath = target.items[i].objectPrefabResourcePath;
                     objsExtraProp[i].spriteResourcePath = target.items[i].spriteResourcePath;
                     objsExtraProp[i].category.name = target.items[i].category.name;
-                    ee
+
                     target.items[i].name = EditorGUILayout.TextField(target.items[i].name, "Name");
+                    target.items[i].hp = int.Parse(EditorGUILayout.TextField("HP", target.items[i].hp.ToString()));
                     objsExtraProp[i].selectedCategory = EditorGUILayout.Popup("Category", objsExtraProp[i].selectedCategory, categories);
                     target.items[i].category.name = objsExtraProp[i].category.name;
+
+                    if (objsExtraProp[i].name.Equals(target.items[i].name) == false ||
+                        objsExtraProp[i].hp != target.items[i].hp ||
+                        objsExtraProp[i].objectPrefabResourcePath.Equals(target.items[i].objectPrefabResourcePath) == false ||
+                        objsExtraProp[i].spriteResourcePath.Equals(target.items[i].spriteResourcePath) == false ||
+                        objsExtraProp[i].category.name.Equals(target.items[i].category.name) == false)
+                    {
+                        SetDirty(DirtyInfo.ModifyObject);
+                    }
 
                     EditorGUI.indentLevel--;
                 }
