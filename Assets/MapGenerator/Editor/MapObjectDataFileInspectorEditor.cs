@@ -8,10 +8,30 @@ using System.Linq;
 [CustomEditor(typeof(MapObjectDataFile))]
 public class MapObjectDataFileInspectorEditor : Editor
 {
-    public class ItemEditingProperty
+    public enum DirtyInfo
+    {
+        None = -1,
+        AddCategory,
+        RemoveCategory,
+        ModifyCategory,
+        AddObject,
+        RemoveObject,
+        ModifyObject,
+    }
+
+    public class ItemEditingProperty : MapObjectAttribute
     {
         public bool foldOut;
         public int selectedCategory;
+
+        public void CopyFrom(MapObjectAttribute source)
+        {
+            name = source.name;
+            objectPrefabResourcePath = source.objectPrefabResourcePath;
+            spriteResourcePath = source.spriteResourcePath;
+            hp = source.hp;
+            category.name = source.category.name;
+        }
     }
 
     new MapObjectDataFile target;
@@ -34,19 +54,35 @@ public class MapObjectDataFileInspectorEditor : Editor
     {
         target = (MapObjectDataFile)base.target;
 
-        categories = target.category.ToArray();
-
         objsExtraProp = new List<ItemEditingProperty>(target.items.Count);
+
+        ApplyInternalCategoriCache();
 
         for (int i = 0; i < objsExtraProp.Capacity; i++)
         {
             objsExtraProp.Add(new ItemEditingProperty());
+            //objsExtraProp.Last().CopyFrom(target.items[i]);
         }
+    }
+
+    void ApplyInternalCategoriCache()
+    {
+        categories = target.category.ToArray();
     }
 
     public override void OnInspectorGUI()
     {
         base.OnInspectorGUI();
+
+        GUI.enabled = dirty;
+
+        if (GUILayout.Button("Save"))
+        {
+            EditorUtility.SetDirty(target);
+            dirty = false;
+        }
+
+        GUI.enabled = true;
 
         if (GUILayout.Button("PrintInfo"))
         {
@@ -71,12 +107,6 @@ public class MapObjectDataFileInspectorEditor : Editor
 
         DrawCategoryEdit();
         DrawObjectEdit();
-
-        if (dirty)
-        {
-            dirty = false;
-            EditorUtility.SetDirty(target);
-        }
     }
 
     private void DrawObjectEdit()
@@ -91,6 +121,7 @@ public class MapObjectDataFileInspectorEditor : Editor
             {
                 target.items.Add(new MapObjectAttribute("N/S"));
                 objsExtraProp.Add(new ItemEditingProperty());
+                SetDirty(DirtyInfo.AddObject);
             }
 
             for (int i = 0; i < target.items.Count; i++)
@@ -101,8 +132,15 @@ public class MapObjectDataFileInspectorEditor : Editor
                 {
                     EditorGUI.indentLevel++;
 
+                    // BackUp For detect changes
+                    objsExtraProp[i].name = target.items[i].name;
+                    objsExtraProp[i].objectPrefabResourcePath = target.items[i].objectPrefabResourcePath;
+                    objsExtraProp[i].spriteResourcePath = target.items[i].spriteResourcePath;
+                    objsExtraProp[i].category.name = target.items[i].category.name;
+                    ee
                     target.items[i].name = EditorGUILayout.TextField(target.items[i].name, "Name");
-                    objsExtraProp[i].selectedCategory = EditorGUILayout.Popup(objsExtraProp[i].selectedCategory, categories);
+                    objsExtraProp[i].selectedCategory = EditorGUILayout.Popup("Category", objsExtraProp[i].selectedCategory, categories);
+                    target.items[i].category.name = objsExtraProp[i].category.name;
 
                     EditorGUI.indentLevel--;
                 }
@@ -110,7 +148,7 @@ public class MapObjectDataFileInspectorEditor : Editor
 
             if (target.category.Count > 0)
             {
-                //                categorySelectedObjectDummy = EditorGUILayout.Popup(categorySelectedObjectDummy, categories);
+                // categorySelectedObjectDummy = EditorGUILayout.Popup(categorySelectedObjectDummy, categories);
             }
             else
             {
@@ -133,7 +171,7 @@ public class MapObjectDataFileInspectorEditor : Editor
 
             GUI.enabled = string.IsNullOrEmpty(categoryToAdd) == false;
 
-            if (GUILayout.Button("Add Category"))
+            if (GUILayout.Button("Add"))
             {
                 bool exist = target.category.Exists(t => t.Equals(categoryToAdd));
 
@@ -144,15 +182,62 @@ public class MapObjectDataFileInspectorEditor : Editor
                 else
                 {
                     target.category.Add(categoryToAdd);
-                    SetDirty();
-
                     categories = target.category.ToArray();
+                    SetDirty(DirtyInfo.AddCategory);
                 }
             }
 
-            EditorGUI.indentLevel--;
             GUI.enabled = true;
+
+            EditorGUILayout.LabelField("Current Categories");
+
+            int removeID = -1;
+
+            for (int i = 0; i < target.category.Count; i++)
+            {
+                EditorGUILayout.BeginHorizontal();
+
+                target.category[i] = EditorGUILayout.TextField(target.category[i]);
+
+                if (GUILayout.Button("X"))
+                {
+                    removeID = i;
+                }
+
+                EditorGUILayout.EndHorizontal();
+            }
+
+            if (removeID != -1)
+            {
+                target.category.Remove(target.category[removeID]);
+                SetDirty(DirtyInfo.RemoveObject);
+            }
+
+            EditorGUI.indentLevel--;
         }
+    }
+
+    new void SetDirty(DirtyInfo dirtyInfo)
+    {
+        switch (dirtyInfo)
+        {
+            case DirtyInfo.None:
+                break;
+            case DirtyInfo.AddCategory:
+                ApplyInternalCategoriCache();
+                break;
+            case DirtyInfo.ModifyCategory:
+                break;
+            case DirtyInfo.AddObject:
+                break;
+            case DirtyInfo.ModifyObject:
+                break;
+            default:
+                Debug.LogError("Add Case");
+                break;
+        }
+
+        dirty = true;
     }
 
     void ResizeList<T>(List<T> list, int cnt)
@@ -174,10 +259,5 @@ public class MapObjectDataFileInspectorEditor : Editor
                 }
             }
         }
-    }
-
-    new void SetDirty()
-    {
-        dirty = true;
     }
 }

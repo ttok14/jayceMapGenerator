@@ -42,13 +42,9 @@ public class MapObjectCategoryAttribute
 abstract public class BaseMapObjectAttribute : IBaseMapObjectCategoryGetter, IBaseMapObjectAttributeSetter
 {
     public string name;
-    public MapObjectCategoryAttribute category;
+    public MapObjectCategoryAttribute category = new MapObjectCategoryAttribute();
 
-    public BaseMapObjectAttribute()
-    {
-        category = new MapObjectCategoryAttribute();
-    }
-
+    public BaseMapObjectAttribute() { }
     public BaseMapObjectAttribute(string name, MapObjectCategoryAttribute category)
     {
         SetIdentifier(name, category);

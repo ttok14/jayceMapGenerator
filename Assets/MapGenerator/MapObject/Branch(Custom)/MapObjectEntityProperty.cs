@@ -28,14 +28,13 @@ public class MapObjectAttribute : BaseMapObjectAttribute, MapObjectResourcePathG
     {
         base.name = name;
     }
-    public MapObjectAttribute(
-        string objectPrefabResourcePath,
-        string spriteResourcePath,
-        int hp)
+    public MapObjectAttribute(MapObjectAttribute source)
     {
-        this.objectPrefabResourcePath = objectPrefabResourcePath;
-        this.spriteResourcePath = spriteResourcePath;
-        this.hp = hp;
+        name = source.name;
+        objectPrefabResourcePath = source.objectPrefabResourcePath;
+        spriteResourcePath = source.spriteResourcePath;
+        category.name = source.category.name;
+        hp = source.hp;
     }
 
     public string GetPrefabPath()

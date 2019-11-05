@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   category:
   - cat
-  - catcat
-  - man
+  - newcate
   items:
   - name: asdasdasdasd
     category:
