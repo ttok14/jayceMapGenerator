@@ -12,11 +12,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 697561a2251729d41bfea811a681dcd9, type: 3}
   m_Name: MapObjectDataFile
   m_EditorClassIdentifier: 
-  category:
-  - cat
-  - newcate
+  category: []
   items:
-  - name: asdasdasdasd
+  - name: ad qwdc
+    category:
+      name: 
+    objectPrefabResourcePath: 
+    spriteResourcePath: 
+    hp: 0
+  - name: asdascxa
+    category:
+      name: 
+    objectPrefabResourcePath: 
+    spriteResourcePath: 
+    hp: 0
+  - name: naemea
+    category:
+      name: 
+    objectPrefabResourcePath: 
+    spriteResourcePath: 
+    hp: 0
+  - name: efe
     category:
       name: 
     objectPrefabResourcePath: 
@@ -28,25 +44,73 @@ MonoBehaviour:
     objectPrefabResourcePath: 
     spriteResourcePath: 
     hp: 0
-  - name: wqe
+  - name: wdcq
     category:
       name: 
     objectPrefabResourcePath: 
     spriteResourcePath: 
     hp: 0
-  - name: Name
+  - name: ecqwec
     category:
       name: 
     objectPrefabResourcePath: 
     spriteResourcePath: 
     hp: 0
-  - name: 
+  - name: asxasa
     category:
       name: 
     objectPrefabResourcePath: 
     spriteResourcePath: 
     hp: 0
-  - name: N/S
+  - name: xzx
+    category:
+      name: 
+    objectPrefabResourcePath: 
+    spriteResourcePath: 
+    hp: 0
+  - name: qweqw
+    category:
+      name: 
+    objectPrefabResourcePath: 
+    spriteResourcePath: 
+    hp: 0
+  - name: asvasvd
+    category:
+      name: 
+    objectPrefabResourcePath: 
+    spriteResourcePath: 
+    hp: 0
+  - name: zxcxzc
+    category:
+      name: 
+    objectPrefabResourcePath: 
+    spriteResourcePath: 
+    hp: 0
+  - name: vadvd
+    category:
+      name: 
+    objectPrefabResourcePath: 
+    spriteResourcePath: 
+    hp: 0
+  - name: bdfb
+    category:
+      name: 
+    objectPrefabResourcePath: 
+    spriteResourcePath: 
+    hp: 0
+  - name: ngrn
+    category:
+      name: 
+    objectPrefabResourcePath: 
+    spriteResourcePath: 
+    hp: 0
+  - name: jmtyjtm
+    category:
+      name: 
+    objectPrefabResourcePath: 
+    spriteResourcePath: 
+    hp: 0
+  - name: ',kuyk,'
     category:
       name: 
     objectPrefabResourcePath: 

@@ -41,7 +41,7 @@ public class MapObjectCategoryAttribute
 [Serializable]
 abstract public class BaseMapObjectAttribute : IBaseMapObjectCategoryGetter, IBaseMapObjectAttributeSetter
 {
-    public string name;
+    public string name = string.Empty;
     public MapObjectCategoryAttribute category = new MapObjectCategoryAttribute();
 
     public BaseMapObjectAttribute() { }

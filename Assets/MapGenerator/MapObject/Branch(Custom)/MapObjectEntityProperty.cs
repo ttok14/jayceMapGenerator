@@ -17,8 +17,8 @@ public class MapObjectGlobalVariables
 [Serializable]
 public class MapObjectAttribute : BaseMapObjectAttribute, MapObjectResourcePathGetter
 {
-    public string objectPrefabResourcePath;
-    public string spriteResourcePath;
+    public string objectPrefabResourcePath = string.Empty;
+    public string spriteResourcePath = string.Empty;
 
     // FIX ME : TEMP 
     public int hp;
@@ -27,6 +27,11 @@ public class MapObjectAttribute : BaseMapObjectAttribute, MapObjectResourcePathG
     public MapObjectAttribute(string name)
     {
         base.name = name;
+    }
+    public MapObjectAttribute(string name, string category)
+    {
+        base.name = name;
+        base.category.name = category;
     }
     public MapObjectAttribute(MapObjectAttribute source)
     {

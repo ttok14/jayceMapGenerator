@@ -4,25 +4,32 @@ using UnityEngine;
 using UnityEditor;
 using System;
 using System.Linq;
+using System.Text;
 
 [CustomEditor(typeof(MapObjectDataFile))]
 public class MapObjectDataFileInspectorEditor : Editor
 {
-    public enum DirtyInfo
+    public enum MapObjectInvalidFlag
     {
-        None = -1,
-        AddCategory,
-        RemoveCategory,
-        ModifyCategory,
-        AddObject,
-        RemoveObject,
-        ModifyObject,
+        Valid = 0,
+        CategoryMissing = 0x1
+    }
+
+    public enum ObjectViewOption
+    {
+        뷰옵션 고 
     }
 
     public class ItemEditingProperty : MapObjectAttribute
     {
         public bool foldOut;
         public int selectedCategory;
+
+        public ItemEditingProperty(string name, string category)
+        {
+            base.name = name;
+            base.category.name = category;
+        }
 
         public void CopyFrom(MapObjectAttribute source)
         {
@@ -34,17 +41,40 @@ public class MapObjectDataFileInspectorEditor : Editor
         }
     }
 
+    public struct ItemInvalidProperty
+    {
+        public MapObjectAttribute target;
+        public MapObjectInvalidFlag flag;
+
+        public ItemInvalidProperty(MapObjectAttribute target, MapObjectInvalidFlag flag)
+        {
+            this.target = target;
+            this.flag = flag;
+        }
+    }
+
+    public class CategoryEditingProperty : MapObjectCategoryAttribute
+    {
+        public CategoryEditingProperty(string category)
+           : base(category)
+        {
+
+        }
+    }
+
     new MapObjectDataFile target;
 
     bool categoryEdit;
     bool objectEdit;
 
     string categoryToAdd;
+    string objectNameToAdd;
 
     int categorySelectedObjectDummy = 0;
 
     public List<ItemEditingProperty> objsExtraProp;
     public MapObjectAttribute objectDummy = new MapObjectAttribute();
+    List<ItemInvalidProperty> objectInvalidInfo = new List<ItemInvalidProperty>();
 
     string[] categories;
 
@@ -54,18 +84,52 @@ public class MapObjectDataFileInspectorEditor : Editor
     {
         target = (MapObjectDataFile)base.target;
 
+        if (target.items == null)
+            target.items = new List<MapObjectAttribute>();
+        if (target.category == null)
+            target.category = new List<string>();
+
         objsExtraProp = new List<ItemEditingProperty>(target.items.Count);
+        //   categoryExtraProp = new List<CategoryEditingProperty>(target.category.Count);
 
-        ApplyInternalCategoriCache();
+        UpdateData();
+    }
 
-        for (int i = 0; i < objsExtraProp.Capacity; i++)
+    private void UpdateData()
+    {
+        RebuildCategory();
+        RebuildObject();
+    }
+
+    private void RebuildObject()
+    {
+        ResizeList(objsExtraProp, target.items.Count);
+
+        for (int i = 0; i < target.items.Count; i++)
         {
-            objsExtraProp.Add(new ItemEditingProperty());
-            //objsExtraProp.Last().CopyFrom(target.items[i]);
+            if (objsExtraProp[i] == null)
+            {
+                objsExtraProp[i] = new ItemEditingProperty("N/S", string.Empty);
+            }
+
+            objsExtraProp[i].category.name = target.items[i].category.name;
+            objsExtraProp[i].hp = target.items[i].hp;
+            objsExtraProp[i].name = target.items[i].name;
+            objsExtraProp[i].objectPrefabResourcePath = target.items[i].objectPrefabResourcePath;
+            objsExtraProp[i].spriteResourcePath = target.items[i].spriteResourcePath;
+            objsExtraProp[i].selectedCategory = Array.IndexOf(categories, target.items[i].category.name);
         }
     }
 
-    void ApplyInternalCategoriCache()
+    private void UpdateObjectCategoryIndex()
+    {
+        for (int i = 0; i < objsExtraProp.Count; i++)
+        {
+            objsExtraProp[i].selectedCategory = Array.IndexOf(categories, target.items[i].category.name);
+        }
+    }
+
+    void RebuildCategory()
     {
         categories = target.category.ToArray();
     }
@@ -76,10 +140,14 @@ public class MapObjectDataFileInspectorEditor : Editor
 
         GUI.enabled = dirty;
 
-        if (GUILayout.Button("Save"))
+        if (GUILayout.Button("Save / Update"))
         {
-            EditorUtility.SetDirty(target);
-            dirty = false;
+            if (CheckSaveValidation())
+            {
+                EditorUtility.SetDirty(target);
+                UpdateData();
+                dirty = false;
+            }
         }
 
         GUI.enabled = true;
@@ -109,6 +177,48 @@ public class MapObjectDataFileInspectorEditor : Editor
         DrawObjectEdit();
     }
 
+    private bool CheckSaveValidation()
+    {
+        objectInvalidInfo.Clear();
+
+        for (int i = 0; i < target.items.Count; i++)
+        {
+            if (target.category.Exists(t => t.Equals(target.items[i].category.name)) == false)
+            {
+                objectInvalidInfo.Add(new ItemInvalidProperty(target.items[i], MapObjectInvalidFlag.CategoryMissing));
+            }
+        }
+
+        if (objectInvalidInfo.Count > 0)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            sb.AppendLine("Name\tFlag");
+
+            for (int i = 0; i < objectInvalidInfo.Count; i++)
+            {
+                AddInvalidObjectMsg(sb, objectInvalidInfo[i]);
+            }
+
+            EditorUtility.DisplayDialog("Invalid Value Found!", sb.ToString(), "OK");
+
+            return false;
+        }
+
+        return true;
+    }
+
+    void AddInvalidObjectMsg(StringBuilder sb, ItemInvalidProperty info)
+    {
+        sb.AppendLine("");
+        sb.Append("Name : " + info.target.name);
+
+        if ((info.flag & MapObjectInvalidFlag.CategoryMissing) != 0)
+        {
+            sb.Append(", Category Missing : " + info.target.category.name);
+        }
+    }
+
     private void DrawObjectEdit()
     {
         objectEdit = EditorGUILayout.Foldout(objectEdit, "Objects");
@@ -117,56 +227,92 @@ public class MapObjectDataFileInspectorEditor : Editor
         {
             EditorGUI.indentLevel++;
 
+            objectNameToAdd = EditorGUILayout.TextField("Name", objectNameToAdd);
+
+            GUI.enabled = string.IsNullOrEmpty(objectNameToAdd) == false;
+
             if (GUILayout.Button("Add"))
             {
-                target.items.Add(new MapObjectAttribute("N/S"));
-                objsExtraProp.Add(new ItemEditingProperty());
-                SetDirty(DirtyInfo.AddObject);
+                var duplicate = target.items.Find(t => t.name.Equals(objectNameToAdd));
+
+                if (duplicate != null)
+                {
+                    EditorUtility.DisplayDialog("Already Exist", "Object \"" + duplicate.name + "\" is already exist", "OK");
+                }
+                else
+                {
+                    string category = GetCurrentDefaultCategory();
+
+                    target.items.Add(new MapObjectAttribute(objectNameToAdd, category));
+                    objsExtraProp.Add(new ItemEditingProperty(objectNameToAdd, category));
+                    SetDirty();
+
+                    objectNameToAdd = string.Empty;
+                    RefreshGUITextField();
+                }
             }
+
+            GUI.enabled = true;
 
             for (int i = 0; i < target.items.Count; i++)
             {
-                objsExtraProp[i].foldOut = EditorGUILayout.Foldout(objsExtraProp[i].foldOut, target.items[i].name + string.Concat("(", target.items[i].category.name, ")"));
+                bool remove = false;
+
+                EditorGUILayout.BeginHorizontal();
+
+                objsExtraProp[i].foldOut = EditorGUILayout.Foldout(objsExtraProp[i].foldOut, target.items[i].name + string.Concat(" (", target.items[i].category.name, ")"));
+
+                if (GUILayout.Button("X"))
+                {
+                    remove = EditorUtility.DisplayDialog("Remove?", "Are you sure?", "YES", "NO");
+
+                    if (remove)
+                    {
+                        target.items.Remove(target.items[i]);
+                        RebuildObject();
+                        SetDirty();
+                        break;
+                    }
+                }
+
+                EditorGUILayout.EndHorizontal();
 
                 if (objsExtraProp[i].foldOut)
                 {
                     EditorGUI.indentLevel++;
 
-                    // BackUp For detect changes
-                    objsExtraProp[i].name = target.items[i].name;
-                    objsExtraProp[i].objectPrefabResourcePath = target.items[i].objectPrefabResourcePath;
-                    objsExtraProp[i].spriteResourcePath = target.items[i].spriteResourcePath;
-                    objsExtraProp[i].category.name = target.items[i].category.name;
-
-                    target.items[i].name = EditorGUILayout.TextField(target.items[i].name, "Name");
+                    target.items[i].name = EditorGUILayout.TextField("Name", target.items[i].name);
                     target.items[i].hp = int.Parse(EditorGUILayout.TextField("HP", target.items[i].hp.ToString()));
                     objsExtraProp[i].selectedCategory = EditorGUILayout.Popup("Category", objsExtraProp[i].selectedCategory, categories);
-                    target.items[i].category.name = objsExtraProp[i].category.name;
+                    int categoryIndex = objsExtraProp[i].selectedCategory;
+                    target.items[i].category.name = categoryIndex >= 0 ? target.category[categoryIndex] : string.Empty;
 
-                    if (objsExtraProp[i].name.Equals(target.items[i].name) == false ||
-                        objsExtraProp[i].hp != target.items[i].hp ||
-                        objsExtraProp[i].objectPrefabResourcePath.Equals(target.items[i].objectPrefabResourcePath) == false ||
-                        objsExtraProp[i].spriteResourcePath.Equals(target.items[i].spriteResourcePath) == false ||
-                        objsExtraProp[i].category.name.Equals(target.items[i].category.name) == false)
+                    if (dirty == false)
                     {
-                        SetDirty(DirtyInfo.ModifyObject);
+                        if (objsExtraProp[i].name.Equals(target.items[i].name) == false ||
+                            objsExtraProp[i].hp != target.items[i].hp ||
+                            objsExtraProp[i].objectPrefabResourcePath.Equals(target.items[i].objectPrefabResourcePath) == false ||
+                            objsExtraProp[i].spriteResourcePath.Equals(target.items[i].spriteResourcePath) == false ||
+                            objsExtraProp[i].category.name.Equals(target.items[i].category.name) == false)
+                        {
+                            SetDirty();
+                        }
                     }
 
                     EditorGUI.indentLevel--;
                 }
             }
 
-            if (target.category.Count > 0)
-            {
-                // categorySelectedObjectDummy = EditorGUILayout.Popup(categorySelectedObjectDummy, categories);
-            }
-            else
-            {
-            }
-
             EditorGUI.indentLevel--;
             //objectDummy.category.name= 
         }
+    }
+
+    private string GetCurrentDefaultCategory()
+    {
+        if (target.category.Count > 0)
+            return target.category[0];
+        else return string.Empty;
     }
 
     private void DrawCategoryEdit()
@@ -192,8 +338,11 @@ public class MapObjectDataFileInspectorEditor : Editor
                 else
                 {
                     target.category.Add(categoryToAdd);
-                    categories = target.category.ToArray();
-                    SetDirty(DirtyInfo.AddCategory);
+                    RebuildCategory();
+                    UpdateObjectCategoryIndex();
+                    SetDirty();
+                    categoryToAdd = string.Empty;
+                    RefreshGUITextField();
                 }
             }
 
@@ -203,15 +352,21 @@ public class MapObjectDataFileInspectorEditor : Editor
 
             int removeID = -1;
 
+            // for (int i = 0; i < target.category.Count; i++)
             for (int i = 0; i < target.category.Count; i++)
             {
                 EditorGUILayout.BeginHorizontal();
 
+                //    categoryExtraProp[i].name = EditorGUILayout.TextField(categoryExtraProp[i].name);
                 target.category[i] = EditorGUILayout.TextField(target.category[i]);
 
                 if (GUILayout.Button("X"))
                 {
                     removeID = i;
+                }
+                else if (target.category[i].Equals(categories[i]) == false)
+                {
+                    SetDirty();
                 }
 
                 EditorGUILayout.EndHorizontal();
@@ -220,34 +375,23 @@ public class MapObjectDataFileInspectorEditor : Editor
             if (removeID != -1)
             {
                 target.category.Remove(target.category[removeID]);
-                SetDirty(DirtyInfo.RemoveObject);
+                RebuildCategory();
+                UpdateObjectCategoryIndex();
+                SetDirty();
             }
 
             EditorGUI.indentLevel--;
         }
     }
 
-    new void SetDirty(DirtyInfo dirtyInfo)
+    new void SetDirty()
     {
-        switch (dirtyInfo)
-        {
-            case DirtyInfo.None:
-                break;
-            case DirtyInfo.AddCategory:
-                ApplyInternalCategoriCache();
-                break;
-            case DirtyInfo.ModifyCategory:
-                break;
-            case DirtyInfo.AddObject:
-                break;
-            case DirtyInfo.ModifyObject:
-                break;
-            default:
-                Debug.LogError("Add Case");
-                break;
-        }
-
         dirty = true;
+    }
+
+    void RefreshGUITextField()
+    {
+        GUIUtility.keyboardControl = 0;
     }
 
     void ResizeList<T>(List<T> list, int cnt)
