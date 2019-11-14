@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class MapObjectGenerator : MapObjectEditGeneratorBase<MapObjectSingleInstance>
+public class MapObjectEditGenerator : MapObjectEditGeneratorBase<MapObjectSingleInstance>
 {
     public GameObject prefab; 
 
